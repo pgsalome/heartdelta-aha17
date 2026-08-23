@@ -170,7 +170,14 @@ repository release and commit used until a formal software citation is issued.
 
 ## License
 
-The repository uses the [PolyForm Noncommercial License 1.0.0](LICENSE).
-Noncommercial use is available under those terms. Commercial services,
-deployment, integration, or anticipated commercial application require a
-separate written agreement; see [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md).
+This software is source-available under the
+[PolyForm Noncommercial License 1.0.0](LICENSE).
+
+Noncommercial use, modification, and redistribution are permitted subject
+to the license terms. Commercial use requires a separate written agreement.
+
+This is not an OSI-approved open-source license.
+
+## Maintainer
+
+Patrick Salome
