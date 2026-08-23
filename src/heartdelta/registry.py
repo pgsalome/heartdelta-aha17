@@ -4,10 +4,12 @@ from pathlib import Path
 
 PATH_FIELDS=(
     "baseline_ct", "ct_rt", "ct_fu1", "ct_fu2", "ct_fu3", "dose",
+    "attenuation_ct_rt", "attenuation_aha17_rt", "attenuation_lv_rt",
     "aha17", "aha17_rt", "aha17_fu1", "aha17_fu2", "aha17_fu3",
     "segment17_platipy", "segment17_platipy_automatic",
     "segment17_platipy_fu1", "segment17_platipy_fu2", "segment17_platipy_fu3",
     "lv_mask", "rv_mask", "la_mask", "heart_mask",
+    "heart", "lv", "lad", "lad_mask", "reference_lv_mask", "manual_lv_mask", "reference_aha17",
     "followup_1_registered", "followup_2_registered",
 )
 

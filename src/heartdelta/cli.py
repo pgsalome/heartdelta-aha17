@@ -29,7 +29,7 @@ def parser():
     p=argparse.ArgumentParser(prog='heartdelta'); s=p.add_subparsers(dest='command',required=True)
     x=s.add_parser('registry-validate'); x.add_argument('registry'); x.add_argument('--no-check-files',action='store_true'); x.set_defaults(func=run_validate)
     x=s.add_parser('aha-generate'); x.add_argument('--registry',required=True); x.add_argument('--output',required=True); x.add_argument('--shell-mm',type=float,default=8); x.set_defaults(func=run_generate)
-    x=s.add_parser('extract'); x.add_argument('--registry',required=True); x.add_argument('--output',required=True); x.add_argument('--alpha-beta',type=float,default=3); x.set_defaults(func=run_extract)
+    x=s.add_parser('extract'); x.add_argument('--registry',required=True); x.add_argument('--output',required=True); x.add_argument('--alpha-beta',type=float,default=2); x.set_defaults(func=run_extract)
     x=s.add_parser('run'); x.add_argument('config'); x.set_defaults(func=run_all)
     return p
 def main(argv=None):

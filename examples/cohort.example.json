@@ -5,9 +5,12 @@
       "ct_rt": "data/case001/ct_rt.nii.gz",
       "ct_fu1": "data/case001/ct_fu1.nii.gz",
       "ct_fu2": "data/case001/ct_fu2.nii.gz",
+      "attenuation_ct_rt": "data/case001/free_breathing_baseline.nii.gz",
       "dose": "data/case001/dose_on_rt.nii.gz",
       "total_dose_gy": 50.0,
       "fractions": 25,
+      "dose_type": "effective",
+      "proton_rbe": 1.1,
       "modality": "Photon",
       "side": "left"
     }

@@ -4,12 +4,18 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "heartdelta-aha17"
-version = "0.2.0"
+version = "0.3.0"
 description = "Longitudinal cardiac CT dose and attenuation analysis in AHA 17 segments"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{name = "Patrick Salome"}]
-dependencies = ["matplotlib>=3.7", "numpy>=1.24", "pandas>=2.0", "scipy>=1.10", "SimpleITK>=2.3"]
+license = {file = "LICENSE"}
+keywords = ["AHA-17", "cardiac dosimetry", "radiotherapy", "longitudinal CT", "EQD2"]
+dependencies = ["matplotlib>=3.7", "numpy>=1.24", "pandas>=2.0", "scipy>=1.10", "SimpleITK>=2.3", "statsmodels>=0.14"]
+
+[project.urls]
+Repository = "https://github.com/pgsalome/heartdelta-aha17"
+Issues = "https://github.com/pgsalome/heartdelta-aha17/issues"
 
 [project.optional-dependencies]
 test = ["pytest>=8.0"]

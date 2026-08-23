@@ -35,9 +35,9 @@ def _trimmed(values,fraction=.1):
 
 
 def extract_timepoint(case:dict,timepoint:str,level:str,slab_mm:float=8.0,band=(2.0,5.0)):
-    ct_path=case.get(f"ct_{timepoint}") if timepoint!="rt" else case.get("ct_rt") or case.get("baseline_ct")
-    aha_path=case.get(f"aha17_{timepoint}") if timepoint!="rt" else case.get("aha17_rt") or case.get("aha17")
-    lv_path=case.get(f"lv_{timepoint}_auto") if timepoint!="rt" else case.get("lv_auto") or case.get("lv") or case.get("lv_mask")
+    ct_path=case.get(f"ct_{timepoint}") if timepoint!="rt" else case.get("attenuation_ct_rt") or case.get("ct_rt") or case.get("baseline_ct")
+    aha_path=case.get(f"aha17_{timepoint}") if timepoint!="rt" else case.get("attenuation_aha17_rt") or case.get("aha17_rt") or case.get("aha17")
+    lv_path=case.get(f"lv_{timepoint}_auto") if timepoint!="rt" else case.get("attenuation_lv_rt") or case.get("lv_auto") or case.get("lv") or case.get("lv_mask")
     if not all(x and Path(x).is_file() for x in (ct_path,aha_path,lv_path)): return [],{"status":"missing_input"}
     ct_image=sitk.ReadImage(str(ct_path)); ct=sitk.GetArrayFromImage(sitk.Cast(ct_image,sitk.sitkFloat32)); labels=np.rint(_labels_on_ct(aha_path,ct_image)).astype(np.int16); lv=_labels_on_ct(lv_path,ct_image)>0
     selected=LEVEL_SEGMENTS[level]
@@ -62,7 +62,7 @@ def extract_case(case:dict,slab_mm=8.0,band=(2.0,5.0)):
             rows.extend(part); qc.append({"case_id":case["case_id"],"timepoint":tp,"level":level,**status})
     frame=pd.DataFrame(rows)
     if not frame.empty:
-        keys=["level","region","segment"]; base=frame[frame.timepoint=="rt"][keys+["hu_mean","hu_trimmed_mean","hu_median","hu_p95"]].rename(columns={x:f"baseline_{x}" for x in ("hu_mean","hu_trimmed_mean","hu_median","hu_p95")}); frame=frame.merge(base,on=keys,how="left")
+        keys=["level","region","segment"]; base_values=["hu_mean","hu_trimmed_mean","hu_median","hu_p95","fraction_hu_0_100"]; base=frame[frame.timepoint=="rt"][keys+base_values].rename(columns={x:f"baseline_{x}" for x in base_values}); frame=frame.merge(base,on=keys,how="left")
         for x in ("hu_mean","hu_trimmed_mean","hu_median","hu_p95"): frame[f"delta_{x}"]=frame[x]-frame[f"baseline_{x}"]
         for field in ("group","modality","side","breathing","delivery_technique","target"):
             if field in case: frame[field]=case[field]

@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import SimpleITK as sitk
 from .aha import LEVELS, NAMES
-from .metrics import eqd2_factor, geud
+from .metrics import eqd2_values, geud
 
 
 def _same_grid(a: sitk.Image, b: sitk.Image, tolerance: float = 1e-5) -> bool:
@@ -27,7 +27,7 @@ def _dose_on_ct(path: str | Path, ct: sitk.Image) -> np.ndarray:
     return sitk.GetArrayFromImage(dose).astype(float)
 
 
-def extract_case(case: dict, alpha_beta: float = 3.0) -> pd.DataFrame:
+def extract_case(case: dict, alpha_beta: float = 2.0) -> pd.DataFrame:
     """Measure RT dose and native HU at every available timepoint."""
     cid = str(case["case_id"])
     rows: list[dict] = []
@@ -36,18 +36,20 @@ def extract_case(case: dict, alpha_beta: float = 3.0) -> pd.DataFrame:
     rt_aha_path = case.get("aha17_rt") or case.get("aha17")
     if rt_ct_path and rt_aha_path and case.get("dose"):
         ct = sitk.ReadImage(str(rt_ct_path)); labels = _labels_on_ct(rt_aha_path, ct); dose = _dose_on_ct(case["dose"], ct)
+        modality=str(case.get("modality",case.get("group",""))).lower(); dose_type=str(case.get("dose_type","as_provided")).lower()
+        if "proton" in modality and dose_type in {"physical","absorbed"}: dose=dose*float(case.get("proton_rbe",1.1))
         total = float(case.get("total_dose_gy", case.get("total_dose_prior", 50)))
         fractions = float(case.get("fractions", case.get("num_fraction_planned", total / 2)))
-        factor = eqd2_factor(total, fractions, alpha_beta)
+        eqd2 = eqd2_values(dose, fractions, alpha_beta)
         spacing = np.prod(ct.GetSpacing()) / 1000.0
         for segment in range(1, 18):
-            values = dose[labels == segment]
+            mask=labels==segment; values=dose[mask]; eqd2_segment=eqd2[mask]
             dose_by_segment[segment] = {
                 "volume_cc": float(len(values) * spacing), "mean_dose_gy": float(np.mean(values)) if len(values) else np.nan,
                 "median_dose_gy": float(np.median(values)) if len(values) else np.nan,
                 "maximum_dose_gy": float(np.max(values)) if len(values) else np.nan,
-                "mean_dose_eqd2": float(np.mean(values) * factor) if len(values) else np.nan,
-                **{f"geud_eqd2_a{a}": geud(values * factor, a) for a in (1, 2, 3, 4, 5)},
+                "mean_dose_eqd2": float(np.mean(eqd2_segment)) if len(values) else np.nan,
+                **{f"geud_eqd2_a{a}": geud(eqd2_segment, a) for a in (1, 2, 3, 4, 5)},
             }
     for tp in ("rt", "fu1", "fu2", "fu3"):
         ct_path = case.get(f"ct_{tp}") if tp != "rt" else rt_ct_path

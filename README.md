@@ -7,6 +7,32 @@
 Reproducible longitudinal cardiac CT and radiotherapy-dose analysis using the
 American Heart Association 17-segment left-ventricular model.
 
+The workflow accompanies the manuscript *Left Ventricular Dose Distribution
+After Proton Versus Photon Regional Nodal Irradiation for Breast Cancer: AHA
+17-Segment Dosimetry*. The code is cohort-reusable; study data are not included.
+See [MANUSCRIPT_COVERAGE.md](MANUSCRIPT_COVERAGE.md) for an exact method-to-code
+inventory and the remaining manuscript-specific inputs.
+
+## Manuscript reproduction status
+
+The core computations are reproducible: voxel-wise cardiac EQD2, 17-segment
+dosimetry, native 8-mm/2–5-mm wall-band extraction, complete three-level QC,
+Wilcoxon comparisons, and the manuscript mixed-effects models. The locked
+153-row attenuation/model table reproduces the reported coefficients.
+
+A completely fresh paper reproduction is not yet claimable from the organized
+registry alone. Two provenance items must be resolved first:
+
+1. The draft describes trachea/aorta HU calibration, but the preserved canonical
+   slab values match the stored CT voxels exactly; the applied calibration
+   coefficients or calibrated image provenance must be identified.
+2. Directly referenced masks yield 26 FU1 and 21 FU2 complete-QC patients,
+   whereas the locked manuscript cohorts contain 29 and 22. Recovered/replaced
+   masks for those additional cases need a versioned override manifest.
+
+The repository does not hide these count mismatches or substitute archived CSVs
+for raw-image processing.
+
 This repository is intended for a new cohort, not only for regenerating one
 figure. Starting from planning and follow-up CT volumes, it can create cardiac
 chamber masks and native-grid AHA-17 maps, extract planning dose and longitudinal
@@ -62,6 +88,16 @@ If accepted AHA maps exist, provide `aha17_rt`, `aha17_fu1`, etc. The pipeline
 then skips segmentation. Corrected masks can therefore replace automatic masks
 without changing downstream code. Relative paths resolve from the registry.
 
+Cardiac EQD2 defaults to α/β = 2 Gy and is calculated voxel-by-voxel before
+regional averaging. Set `dose_type` to `physical` for a proton grid that still
+requires `proton_rbe` (1.1 in the manuscript), or to `effective` when the grid
+is already RBE-weighted. `as_provided` applies no RBE transformation.
+
+When the treatment-planning CT and attenuation baseline differ—for example,
+breath-hold dosimetry but free-breathing longitudinal comparison—keep `ct_rt`
+and `aha17_rt` as the dose geometry and additionally provide
+`attenuation_ct_rt`, `attenuation_aha17_rt`, and `attenuation_lv_rt`.
+
 ## Complete workflow
 
 Copy and edit `examples/workflow.example.json`, then run:
@@ -84,7 +120,13 @@ It writes:
 - `native_slab_level_metrics.csv`: pooled basal, mid, and apical values joined
   to planning dose and used by the supplied cohort statistics and figures;
 - `aha_qc.csv`: label occupancy and completeness;
-- `group_tests.csv` and `dose_response.csv`;
+- `attenuation_cohort_qc.csv` and `attenuation_analysis_cohort.csv`: complete
+  three-level QC and the exact rows admitted to modeling;
+- `group_tests.csv`, `dose_response.csv`, `mixed_model_terms.csv`, and
+  `mixed_model_diagnostics.csv`;
+- `cardiac_structure_dvh_metrics.csv` when heart/LV/LAD masks are supplied;
+- `segmentation_validation.csv`, segment differences, and an agreement summary
+  when physician/reference LV and AHA masks are supplied;
 - `level_group_boxplots.png` and `level_dose_response.png`;
 - `run_summary.json` with completion counts.
 
@@ -124,6 +166,17 @@ orientation, occupancy of all 17 labels, CT/dose physical-coordinate agreement,
 dose units, fractionation, motion, contrast, reconstruction, and metal artifact.
 The automated QC table does not replace visual clinical review.
 
+The manuscript excludes a follow-up unless both baseline and follow-up pooled
+wall-band medians are 0–100 HU, at least 80% of their voxels are within 0–100
+HU, and all three levels pass. This is the default workflow behavior. For a
+different prospective protocol it can be disabled explicitly with
+`"require_complete_three_level_qc": false`.
+
+HU calibration is deliberately not guessed. If scanner-reference calibration
+is required, supply CT volumes already calibrated using the study's trachea and
+aorta procedure. The repository currently preserves those voxel values but does
+not infer missing calibration masks or coefficients.
+
 This software is for research use and is not a treatment-planning or diagnostic
 device. Patient data and local paths must not be committed.
 
@@ -147,6 +200,12 @@ Noncommercial use, modification, and redistribution are permitted subject to
 the license terms. Commercial use requires a separate written agreement.
 
 This is not an OSI-approved open-source license.
+
+## Citation
+
+Until the associated manuscript has a final citation, cite the repository URL,
+release/version, and commit used. Machine-readable metadata are provided in
+[`CITATION.cff`](CITATION.cff).
 
 ## Maintainer
 

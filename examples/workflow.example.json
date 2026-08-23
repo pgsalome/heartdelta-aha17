@@ -4,7 +4,9 @@
   "output_dir": "../outputs",
   "segment": true,
   "overwrite": false,
-  "alpha_beta": 3.0,
+  "alpha_beta": 2.0,
   "slab_mm": 8.0,
-  "myocardial_band_mm": [2.0, 5.0]
+  "myocardial_band_mm": [2.0, 5.0],
+  "include_sides": ["left", "bilateral"],
+  "require_complete_three_level_qc": true
 }

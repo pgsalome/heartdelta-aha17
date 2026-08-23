@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from .analysis import canonical_arm
 
 LEVEL_ORDER = ["basal", "mid", "apical"]
 
@@ -11,13 +12,13 @@ LEVEL_ORDER = ["basal", "mid", "apical"]
 def grouped_boxplots(levels: pd.DataFrame, output: str | Path) -> Path:
     data = levels[(levels.timepoint != "rt") & levels.delta_hu_mean.notna()].copy()
     arm = "modality" if "modality" in data else "group"
-    data[arm] = data[arm].astype(str).str.lower()
+    data["_arm"]=[canonical_arm(a,b) for a,b in zip(data.get("modality",pd.Series("",index=data.index)),data.get("group",pd.Series("",index=data.index)))]
     tps = [x for x in ("fu1", "fu2", "fu3") if x in set(data.timepoint)]
     fig, axes = plt.subplots(len(LEVEL_ORDER), len(tps), figsize=(6 * len(tps), 4.4 * 3), sharey=True, squeeze=False)
     for i, level in enumerate(LEVEL_ORDER):
         for j, tp in enumerate(tps):
             ax = axes[i, j]; part = data[(data.level == level) & (data.timepoint == tp)]
-            vals = [part[part[arm].str.contains(x)].delta_hu_mean.dropna().to_numpy() for x in ("proton", "photon")]
+            vals = [part[part._arm.eq(x)].delta_hu_mean.dropna().to_numpy() for x in ("proton", "photon")]
             ax.boxplot(vals, labels=[f"Proton\n(n={len(vals[0])})", f"Photon\n(n={len(vals[1])})"], patch_artist=True, boxprops={"facecolor":"#d9eaf4"})
             for k, values in enumerate(vals, 1): ax.scatter(np.full(len(values), k) + np.linspace(-.07, .07, len(values)), values, s=18)
             ax.axhline(0, color="#3182bd", ls="--", lw=.8); ax.set_title(f"{tp.upper()}: {level.title()} LV")
@@ -27,14 +28,14 @@ def grouped_boxplots(levels: pd.DataFrame, output: str | Path) -> Path:
 
 def dose_response_panels(levels: pd.DataFrame, output: str | Path) -> Path:
     data = levels[(levels.timepoint != "rt") & levels.delta_hu_mean.notna() & levels.mean_dose_eqd2.notna()].copy()
-    arm = "modality" if "modality" in data else "group"; data[arm] = data[arm].astype(str).str.lower()
+    arm = "modality" if "modality" in data else "group"; data["_arm"]=[canonical_arm(a,b) for a,b in zip(data.get("modality",pd.Series("",index=data.index)),data.get("group",pd.Series("",index=data.index)))]
     tps = [x for x in ("fu1", "fu2", "fu3") if x in set(data.timepoint)]
     fig, axes = plt.subplots(len(tps), 3, figsize=(15, 4.2 * len(tps)), sharex=True, sharey=True, squeeze=False)
     for i, tp in enumerate(tps):
         for j, level in enumerate(LEVEL_ORDER):
             ax = axes[i,j]; part = data[(data.timepoint == tp) & (data.level == level)]
             for name, marker, color in (("proton","o","#3182bd"),("photon","^","#e6550d")):
-                p = part[part[arm].str.contains(name)]; ax.scatter(p.mean_dose_eqd2, p.delta_hu_mean, marker=marker, color=color, label=name.title())
+                p = part[part._arm.eq(name)]; ax.scatter(p.mean_dose_eqd2, p.delta_hu_mean, marker=marker, color=color, label=name.title())
             if len(part) >= 3:
                 fit = np.polyfit(part.mean_dose_eqd2, part.delta_hu_mean, 1); x = np.linspace(part.mean_dose_eqd2.min(), part.mean_dose_eqd2.max(), 100); ax.plot(x, np.polyval(fit,x), color="black")
             ax.axhline(0,color="grey",ls="--",lw=.7); ax.set_title(f"{tp.upper()}: {level.title()}"); ax.set_xlabel("Mean dose (Gy EQD2)")

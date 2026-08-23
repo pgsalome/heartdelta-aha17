@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software, cite the repository version and associated manuscript when available."
+title: "heartdelta-aha17: Longitudinal cardiac CT and AHA-17 dosimetry"
+type: software
+authors:
+  - family-names: Salome
+    given-names: Patrick
+repository-code: "https://github.com/pgsalome/heartdelta-aha17"
+version: 0.3.0
+date-released: 2026-08-23
+license: LicenseRef-PolyForm-Noncommercial-1.0.0
