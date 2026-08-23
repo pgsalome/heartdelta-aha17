@@ -15,6 +15,7 @@ reproduction.
 | Full AHA masks for dose | `segment_metrics.csv` and `level_metrics.csv` |
 | 8-mm oblique slab at maximum level area | `heartdelta.slab` |
 | Band 2–5 mm inward from the outer LV contour | `heartdelta.slab` |
+| Trachea/aorta calibration to −1000/+50 HU | `heartdelta.calibration`; coefficients and QC are recorded per timepoint |
 | Separate treatment-planning and attenuation baseline CTs | `ct_rt`/`aha17_rt` plus optional `attenuation_*_rt` registry fields |
 | Median and ≥80% in-range wall-band QC | `heartdelta.analysis.complete_level_cohort` |
 | Same patients at all three levels per follow-up | `attenuation_analysis_cohort.csv` |
@@ -34,10 +35,10 @@ trial data, clinical judgments, or a study-specific convention:
 
 - DICOM-to-NIfTI and RTSTRUCT conversion. The public workflow starts from
   NIfTI CT, dose, and masks.
-- The study's trachea/aorta scanner-calibration operation. Provide calibrated
-  CT volumes or add a validated calibration stage with the required masks and
-  coefficients. The preserved canonical slab comparison above used the stored
-  CT voxel values.
+- Timepoint-specific trachea and aorta masks. The calibration operation is now
+  implemented, but the protected masks are required to run it. The preserved
+  canonical slab comparison used stored, untransformed CT voxel values, so a
+  normalized rerun is expected to change the archived HU results.
 - Physician reference contours and the 53-patient validation dataset. When
   supplied, the software computes Dice, automatic-versus-manual dose agreement,
   limits of agreement, and segment differences; the protected masks are absent.

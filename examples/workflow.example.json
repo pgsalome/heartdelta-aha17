@@ -7,6 +7,9 @@
   "alpha_beta": 2.0,
   "slab_mm": 8.0,
   "myocardial_band_mm": [2.0, 5.0],
+  "hu_normalization": "trachea_aorta",
+  "target_air_hu": -1000.0,
+  "target_blood_hu": 50.0,
   "include_sides": ["left", "bilateral"],
   "require_complete_three_level_qc": true
 }

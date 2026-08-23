@@ -23,9 +23,10 @@ Wilcoxon comparisons, and the manuscript mixed-effects models. The locked
 A completely fresh paper reproduction is not yet claimable from the organized
 registry alone. Two provenance items must be resolved first:
 
-1. The draft describes trachea/aorta HU calibration, but the preserved canonical
-   slab values match the stored CT voxels exactly; the applied calibration
-   coefficients or calibrated image provenance must be identified.
+1. Trachea/aorta normalization is now implemented, but the preserved canonical
+   slab values match the untransformed stored CT voxels exactly. A fresh
+   normalized rerun will therefore be a method correction, not a byte-for-byte
+   reproduction of those archived values.
 2. Directly referenced masks yield 26 FU1 and 21 FU2 complete-QC patients,
    whereas the locked manuscript cohorts contain 29 and 22. Recovered/replaced
    masks for those additional cases need a versioned override manifest.
@@ -173,9 +174,22 @@ different prospective protocol it can be disabled explicitly with
 `"require_complete_three_level_qc": false`.
 
 HU calibration is deliberately not guessed. If scanner-reference calibration
-is required, supply CT volumes already calibrated using the study's trachea and
-aorta procedure. The repository currently preserves those voxel values but does
-not infer missing calibration masks or coefficients.
+is required, supply timepoint-specific `trachea_*` and `aorta_*` masks and set
+`"hu_normalization": "trachea_aorta"`. The pipeline uses the historical
+two-point affine transform based on full-mask means, mapping tracheal air to
+−1000 HU and aortic blood to +50 HU. Missing masks, too few voxels, or inadequate
+landmark separation fail QC; the measured means, scale, intercept, and voxel
+counts are written to `native_slab_qc.csv`.
+
+To create a normalized CT independently:
+
+```bash
+heartdelta-normalize \
+  --ct ct.nii.gz --trachea trachea.nii.gz --aorta aorta.nii.gz \
+  --output ct_normalized.nii.gz
+```
+
+This writes the normalized volume plus a calibration JSON sidecar.
 
 This software is for research use and is not a treatment-planning or diagnostic
 device. Patient data and local paths must not be committed.

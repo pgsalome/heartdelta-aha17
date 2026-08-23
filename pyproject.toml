@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "heartdelta-aha17"
-version = "0.3.0"
+version = "0.4.0"
 description = "Longitudinal cardiac CT dose and attenuation analysis in AHA 17 segments"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -24,6 +24,7 @@ segmentation = ["platipy[cardiac]"]
 [project.scripts]
 heartdelta = "heartdelta.cli:main"
 heartdelta-run = "heartdelta.workflow:main"
+heartdelta-normalize = "heartdelta.calibration:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -6,6 +6,7 @@ import pandas as pd
 import SimpleITK as sitk
 from scipy.ndimage import distance_transform_edt
 from .native import _labels_on_ct
+from .calibration import apply as apply_calibration, parameters as calibration_parameters
 
 LEVEL_SEGMENTS={"basal":tuple(range(1,7)),"mid":tuple(range(7,13)),"apical":tuple(range(13,18))}
 
@@ -34,12 +35,17 @@ def _trimmed(values,fraction=.1):
     values=np.sort(values); trim=int(np.floor(len(values)*fraction)); return float(values[trim:-trim].mean()) if trim and 2*trim<len(values) else float(values.mean())
 
 
-def extract_timepoint(case:dict,timepoint:str,level:str,slab_mm:float=8.0,band=(2.0,5.0)):
+def extract_timepoint(case:dict,timepoint:str,level:str,slab_mm:float=8.0,band=(2.0,5.0),normalization="none",target_air=-1000.0,target_blood=50.0):
     ct_path=case.get(f"ct_{timepoint}") if timepoint!="rt" else case.get("attenuation_ct_rt") or case.get("ct_rt") or case.get("baseline_ct")
     aha_path=case.get(f"aha17_{timepoint}") if timepoint!="rt" else case.get("attenuation_aha17_rt") or case.get("aha17_rt") or case.get("aha17")
     lv_path=case.get(f"lv_{timepoint}_auto") if timepoint!="rt" else case.get("attenuation_lv_rt") or case.get("lv_auto") or case.get("lv") or case.get("lv_mask")
     if not all(x and Path(x).is_file() for x in (ct_path,aha_path,lv_path)): return [],{"status":"missing_input"}
-    ct_image=sitk.ReadImage(str(ct_path)); ct=sitk.GetArrayFromImage(sitk.Cast(ct_image,sitk.sitkFloat32)); labels=np.rint(_labels_on_ct(aha_path,ct_image)).astype(np.int16); lv=_labels_on_ct(lv_path,ct_image)>0
+    ct_image=sitk.ReadImage(str(ct_path)); ct=sitk.GetArrayFromImage(sitk.Cast(ct_image,sitk.sitkFloat32)); calibration={}
+    if normalization=="trachea_aorta":
+        trachea=case.get(f"trachea_{timepoint}") or (case.get("trachea_auto") if timepoint=="rt" else None); aorta=case.get(f"aorta_{timepoint}") or (case.get("aorta_auto") if timepoint=="rt" else None)
+        if not trachea or not aorta: raise ValueError(f"missing {timepoint} trachea/aorta calibration masks")
+        calibration=calibration_parameters(ct_image,trachea,aorta,target_air,target_blood); ct=apply_calibration(ct,calibration)
+    labels=np.rint(_labels_on_ct(aha_path,ct_image)).astype(np.int16); lv=_labels_on_ct(lv_path,ct_image)>0
     selected=LEVEL_SEGMENTS[level]
     if not set(selected).issubset(set(np.unique(labels))): raise ValueError(f"incomplete {level} labels")
     overlap=np.count_nonzero((labels>0)&lv)/max(np.count_nonzero(labels>0),1)
@@ -50,14 +56,14 @@ def extract_timepoint(case:dict,timepoint:str,level:str,slab_mm:float=8.0,band=(
     for segment in (*selected,0):
         mask=common&(np.isin(clabels,selected) if segment==0 else clabels==segment); values=cct[mask]; values=values[np.isfinite(values)]
         rows.append({"case_id":str(case["case_id"]),"timepoint":timepoint,"level":level,"segment":segment if segment else pd.NA,"region":f"segments{selected[0]}-{selected[-1]}_pooled" if not segment else f"segment{segment}","n_voxels":len(values),"volume_cc":len(values)*voxel/1000,"hu_mean":float(values.mean()) if len(values) else np.nan,"hu_trimmed_mean":_trimmed(values) if len(values) else np.nan,"hu_median":float(np.median(values)) if len(values) else np.nan,"hu_p95":float(np.percentile(values,95)) if len(values) else np.nan,"fraction_hu_0_100":float(np.mean((values>=0)&(values<=100))) if len(values) else np.nan})
-    return rows,{"status":"ok","aha_lv_overlap_fraction":overlap,"axis_method":method,"slab_center_projection_mm":center,"ring_voxels":len(ring),"slab_mm":slab_mm,"band_low_mm":band[0],"band_high_mm":band[1]}
+    return rows,{"status":"ok","hu_normalization":normalization,"aha_lv_overlap_fraction":overlap,"axis_method":method,"slab_center_projection_mm":center,"ring_voxels":len(ring),"slab_mm":slab_mm,"band_low_mm":band[0],"band_high_mm":band[1],**calibration}
 
 
-def extract_case(case:dict,slab_mm=8.0,band=(2.0,5.0)):
+def extract_case(case:dict,slab_mm=8.0,band=(2.0,5.0),normalization="none",target_air=-1000.0,target_blood=50.0):
     rows=[]; qc=[]
     for tp in ("rt","fu1","fu2","fu3"):
         for level in LEVEL_SEGMENTS:
-            try: part,status=extract_timepoint(case,tp,level,slab_mm,band)
+            try: part,status=extract_timepoint(case,tp,level,slab_mm,band,normalization,target_air,target_blood)
             except (RuntimeError,ValueError) as exc: part,status=[],{"status":"failed_qc","error":str(exc)}
             rows.extend(part); qc.append({"case_id":case["case_id"],"timepoint":tp,"level":level,**status})
     frame=pd.DataFrame(rows)

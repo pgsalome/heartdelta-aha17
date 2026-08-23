@@ -10,6 +10,7 @@ PATH_FIELDS=(
     "segment17_platipy_fu1", "segment17_platipy_fu2", "segment17_platipy_fu3",
     "lv_mask", "rv_mask", "la_mask", "heart_mask",
     "heart", "lv", "lad", "lad_mask", "reference_lv_mask", "manual_lv_mask", "reference_aha17",
+    "trachea_rt", "aorta_rt", "trachea_fu1", "aorta_fu1", "trachea_fu2", "aorta_fu2", "trachea_fu3", "aorta_fu3", "trachea_auto", "aorta_auto",
     "followup_1_registered", "followup_2_registered",
 )
 

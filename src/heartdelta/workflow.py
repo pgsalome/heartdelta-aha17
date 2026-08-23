@@ -39,7 +39,7 @@ def run(config_path: str | Path) -> dict[str, int]:
         try:
             frame=extract_case(case,float(cfg.get("alpha_beta",2.0)))
             if not frame.empty: rows.append(frame)
-            slab,slab_status=extract_slab_case(case,float(cfg.get("slab_mm",8.0)),tuple(cfg.get("myocardial_band_mm",[2.0,5.0])))
+            slab,slab_status=extract_slab_case(case,float(cfg.get("slab_mm",8.0)),tuple(cfg.get("myocardial_band_mm",[2.0,5.0])),str(cfg.get("hu_normalization","none")),float(cfg.get("target_air_hu",-1000)),float(cfg.get("target_blood_hu",50)))
             if not slab.empty: slab_rows.append(slab)
             if not slab_status.empty: slab_qc.append(slab_status)
             dvh=extract_dvh_case(case,float(cfg.get("alpha_beta",2.0)))
