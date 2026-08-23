@@ -1,2 +1,0 @@
-{"cases":[{"case_id":"case001","baseline_ct":"/path/baseline.nii.gz","followup_1_registered":"/path/fu1_on_baseline.nii.gz","dose":"/path/dose_on_baseline.nii.gz","aha17":"/path/aha17.nii.gz","fractions":25,"total_dose_gy":50,"modality":"Proton","side":"left"}]}
-

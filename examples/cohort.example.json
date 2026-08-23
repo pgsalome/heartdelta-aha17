@@ -1,0 +1,15 @@
+{
+  "cases": [
+    {
+      "case_id": "case001",
+      "ct_rt": "data/case001/ct_rt.nii.gz",
+      "ct_fu1": "data/case001/ct_fu1.nii.gz",
+      "ct_fu2": "data/case001/ct_fu2.nii.gz",
+      "dose": "data/case001/dose_on_rt.nii.gz",
+      "total_dose_gy": 50.0,
+      "fractions": 25,
+      "modality": "Photon",
+      "side": "left"
+    }
+  ]
+}

@@ -5,6 +5,7 @@ import pandas as pd
 from .aha import generate
 from .metrics import aggregate_levels,extract
 from .registry import load,validate
+from .workflow import run as run_workflow
 
 def run_validate(a):
     errors=validate(a.registry,not a.no_check_files)
@@ -22,15 +23,17 @@ def run_extract(a):
     segments=pd.concat(frames,ignore_index=True); root=Path(a.output); root.mkdir(parents=True,exist_ok=True)
     segments.to_csv(root/'segment_metrics.csv',index=False); aggregate_levels(segments).to_csv(root/'level_metrics.csv',index=False)
     print(f'Extracted {len(segments)} segment rows from {segments.case_id.nunique()} cases'); return 0
+def run_all(a):
+    print(json.dumps(run_workflow(a.config),indent=2)); return 0
 def parser():
     p=argparse.ArgumentParser(prog='heartdelta'); s=p.add_subparsers(dest='command',required=True)
     x=s.add_parser('registry-validate'); x.add_argument('registry'); x.add_argument('--no-check-files',action='store_true'); x.set_defaults(func=run_validate)
     x=s.add_parser('aha-generate'); x.add_argument('--registry',required=True); x.add_argument('--output',required=True); x.add_argument('--shell-mm',type=float,default=8); x.set_defaults(func=run_generate)
     x=s.add_parser('extract'); x.add_argument('--registry',required=True); x.add_argument('--output',required=True); x.add_argument('--alpha-beta',type=float,default=3); x.set_defaults(func=run_extract)
+    x=s.add_parser('run'); x.add_argument('config'); x.set_defaults(func=run_all)
     return p
 def main(argv=None):
     a=parser().parse_args(argv)
     try: return int(a.func(a))
     except (ValueError,FileNotFoundError,RuntimeError) as e: print(f'ERROR: {e}'); return 1
 if __name__=='__main__': raise SystemExit(main())
-

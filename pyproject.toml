@@ -4,22 +4,23 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "heartdelta-aha17"
-version = "0.1.0"
+version = "0.2.0"
 description = "Longitudinal cardiac CT dose and attenuation analysis in AHA 17 segments"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{name = "Patrick Salome"}]
-dependencies = ["numpy>=1.24", "pandas>=2.0", "scipy>=1.10", "SimpleITK>=2.3"]
+dependencies = ["matplotlib>=3.7", "numpy>=1.24", "pandas>=2.0", "scipy>=1.10", "SimpleITK>=2.3"]
 
 [project.optional-dependencies]
 test = ["pytest>=8.0"]
+segmentation = ["platipy[cardiac]"]
 
 [project.scripts]
 heartdelta = "heartdelta.cli:main"
+heartdelta-run = "heartdelta.workflow:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-
