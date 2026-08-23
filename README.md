@@ -27,9 +27,10 @@ registry alone. Two provenance items must be resolved first:
    slab values match the untransformed stored CT voxels exactly. A fresh
    normalized rerun will therefore be a method correction, not a byte-for-byte
    reproduction of those archived values.
-2. Directly referenced masks yield 26 FU1 and 21 FU2 complete-QC patients,
-   whereas the locked manuscript cohorts contain 29 and 22. Recovered/replaced
-   masks for those additional cases need a versioned override manifest.
+2. Accepted recovered/replaced masks are now recorded in the versioned
+   [`provenance/u19_mask_overrides.csv`](provenance/u19_mask_overrides.csv).
+   A fresh normalized rerun must still confirm the locked manuscript counts of
+   29 FU1 and 22 FU2 patients.
 
 The repository does not hide these count mismatches or substitute archived CSVs
 for raw-image processing.
@@ -88,6 +89,12 @@ Copy `examples/cohort.example.json`. Each case may contain:
 If accepted AHA maps exist, provide `aha17_rt`, `aha17_fu1`, etc. The pipeline
 then skips segmentation. Corrected masks can therefore replace automatic masks
 without changing downstream code. Relative paths resolve from the registry.
+
+For reviewed replacements, set `mask_overrides` in the workflow configuration
+to a CSV with `case_id`, `timepoint`, `aha17_path`, and optional `lv_path`.
+Relative paths resolve from the CSV; environment variables are supported. The
+applied row is retained as in-memory provenance for each case. See
+[`examples/mask_overrides.example.csv`](examples/mask_overrides.example.csv).
 
 Cardiac EQD2 defaults to α/β = 2 Gy and is calculated voxel-by-voxel before
 regional averaging. Set `dose_type` to `physical` for a proton grid that still

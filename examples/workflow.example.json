@@ -1,5 +1,6 @@
 {
   "registry": "cohort.example.json",
+  "mask_overrides": "mask_overrides.example.csv",
   "processed_dir": "../processed",
   "output_dir": "../outputs",
   "segment": true,

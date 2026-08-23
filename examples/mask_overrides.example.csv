@@ -1,0 +1,2 @@
+case_id,timepoint,aha17_path,lv_path,source_method,qc_status,note
+case001,fu1,accepted_masks/case001_fu1_aha17.nii.gz,accepted_masks/case001_fu1_lv.nii.gz,reviewed_replacement,accepted,Example only; replace with paths from your cohort.

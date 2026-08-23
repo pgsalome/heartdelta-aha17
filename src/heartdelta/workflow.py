@@ -6,7 +6,7 @@ import pandas as pd
 from .analysis import complete_level_cohort, dose_response, group_tests, mixed_effects_models
 from .figures import dose_response_panels, grouped_boxplots
 from .native import aggregate_levels, extract_case
-from .registry import load
+from .registry import apply_mask_overrides, load
 from .segmentation import qc_labels, segment_scan
 from .slab import extract_case as extract_slab_case
 from .dvh import extract_case as extract_dvh_case
@@ -18,7 +18,10 @@ def run(config_path: str | Path) -> dict[str, int]:
     resolve=lambda p: str((config_path.parent / p).resolve()) if p and not Path(p).is_absolute() else p
     registry = resolve(cfg["registry"]); processed = Path(resolve(cfg.get("processed_dir", "processed"))); output = Path(resolve(cfg.get("output_dir", "outputs")))
     processed.mkdir(parents=True,exist_ok=True); output.mkdir(parents=True,exist_ok=True)
-    cases=load(registry); include_sides={str(x).lower() for x in cfg.get("include_sides",[])}
+    cases=load(registry)
+    if cfg.get("mask_overrides"):
+        cases=apply_mask_overrides(cases,resolve(cfg["mask_overrides"]))
+    include_sides={str(x).lower() for x in cfg.get("include_sides",[])}
     if include_sides: cases=[x for x in cases if str(x.get("side","")).lower() in include_sides]
     do_segment=bool(cfg.get("segment", True)); overwrite=bool(cfg.get("overwrite",False)); rows=[]; qc=[]; status=[]; slab_rows=[]; slab_qc=[]; dvh_rows=[]; validation_rows=[]; validation_segments=[]
     for case in cases:

@@ -68,10 +68,11 @@ volumes or calibration provenance. Cohort counts should resolve to 24 photon and
 three-level QC. A count mismatch is a failed reproduction, not a warning to
 ignore.
 
-The organized registry currently yields 26 automated-QC FU1 patients and 21
+The organized registry originally yielded 26 automated-QC FU1 patients and 21
 FU2 patients from its directly referenced masks, whereas the locked manuscript
-analysis contains 29 and 22. Before claiming a fresh manuscript reproduction,
-the recovered/replaced-mask provenance for those additional three FU1 and one
-FU2 cases must be encoded in a versioned registry or mask-override manifest.
+analysis contains 29 and 22. The recovered/replaced masks found during the
+audit are now encoded in `provenance/u19_mask_overrides.csv`; all referenced
+files were present when the manifest was created. A fresh normalized run must
+still verify that the accepted overrides reproduce the locked cohort counts.
 The archived 153-row locked analysis table is the source that reproduced the
 reported mixed-model coefficients.

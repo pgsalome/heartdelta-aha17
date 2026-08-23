@@ -1,5 +1,7 @@
 from __future__ import annotations
 import json
+import csv
+import os
 from pathlib import Path
 
 PATH_FIELDS=(
@@ -30,6 +32,43 @@ def load(path):
             if value and not Path(value).is_absolute(): case[key]=str((source.parent/value).resolve())
         out.append(case)
     return out
+
+
+def apply_mask_overrides(cases, path):
+    """Apply an audited CSV of accepted timepoint-specific AHA/LV masks.
+
+    Required columns are ``case_id`` (or ``patient_id``), ``timepoint`` (or
+    ``phase``), and ``aha17_path``. ``lv_path`` is optional. Relative paths
+    resolve from the CSV and environment variables are expanded.
+    """
+    source = Path(path)
+    by_id = {str(case.get("case_id") or case.get("patient_id")): case for case in cases}
+    with source.open(newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    for row_number, row in enumerate(rows, start=2):
+        case_id = str(row.get("case_id") or row.get("patient_id") or "").strip()
+        timepoint = str(row.get("timepoint") or row.get("phase") or "").strip().lower()
+        if case_id not in by_id:
+            raise ValueError(f"{source}:{row_number}: unknown case_id {case_id!r}")
+        if timepoint not in {"rt", "fu1", "fu2", "fu3"}:
+            raise ValueError(f"{source}:{row_number}: invalid timepoint {timepoint!r}")
+        aha17 = str(row.get("aha17_path") or "").strip()
+        if not aha17:
+            raise ValueError(f"{source}:{row_number}: missing aha17_path")
+
+        def resolve(value):
+            expanded = Path(os.path.expandvars(os.path.expanduser(value)))
+            return str(expanded if expanded.is_absolute() else (source.parent / expanded).resolve())
+
+        case = by_id[case_id]
+        case[f"aha17_{timepoint}"] = resolve(aha17)
+        lv = str(row.get("lv_path") or "").strip()
+        if lv:
+            case["attenuation_lv_rt" if timepoint == "rt" else f"lv_{timepoint}_auto"] = resolve(lv)
+        case.setdefault("mask_override_provenance", {})[timepoint] = {
+            key: value for key, value in row.items() if value not in (None, "")
+        }
+    return cases
 
 def validate(path,check_files=True):
     errors=[]; seen=set()
