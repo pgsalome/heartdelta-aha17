@@ -264,8 +264,41 @@ python -m pytest tests -q
 
 ## Citation
 
-Cite the repository URL, version, and commit used. GitHub's **Cite this
-repository** control uses [CITATION.cff](CITATION.cff).
+If you use the automatic cardiac segmentation workflow, cite PlatiPy and the
+hybrid cardiac segmentation method:
+
+- [PlatiPy: Processing Library and Analysis Toolkit for Medical Imaging in Python](https://doi.org/10.21105/joss.05374)
+- [Open-source, fully-automated hybrid cardiac substructure segmentation: development and optimisation](https://doi.org/10.1007/s13246-023-01231-w)
+
+```bibtex
+@article{chlap2023platipy,
+  title = {{PlatiPy}: Processing Library and Analysis Toolkit for Medical Imaging in {Python}},
+  author = {Chlap, Phillip and Finnegan, Robert N.},
+  journal = {Journal of Open Source Software},
+  year = {2023},
+  volume = {8},
+  number = {86},
+  pages = {5374},
+  doi = {10.21105/joss.05374},
+  url = {https://doi.org/10.21105/joss.05374}
+}
+
+@article{finnegan2023cardiac,
+  title = {Open-source, fully-automated hybrid cardiac substructure segmentation: development and optimisation},
+  author = {Finnegan, Robert N. and Chin, Vicky and Chlap, Phillip and
+            Haidar, Ali and Otton, James and Dowling, Jason and
+            Thwaites, David I. and Vinod, Shalini K. and
+            Delaney, Geoff P. and Holloway, Lois},
+  journal = {Physical and Engineering Sciences in Medicine},
+  year = {2023},
+  volume = {46},
+  pages = {377--393},
+  doi = {10.1007/s13246-023-01231-w},
+  url = {https://doi.org/10.1007/s13246-023-01231-w}
+}
+```
+
+Record the repository version and commit used for reproducibility.
 
 ## License
 
@@ -273,5 +306,3 @@ repository** control uses [CITATION.cff](CITATION.cff).
 separate written agreement. External model and atlas licenses apply separately.
 
 For research use. Imaging data and model weights are not bundled.
-
-Maintainer: Patrick Salome
