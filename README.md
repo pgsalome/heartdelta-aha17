@@ -4,230 +4,227 @@
 [![tests](https://github.com/pgsalome/heartdelta-aha17/actions/workflows/tests.yml/badge.svg)](https://github.com/pgsalome/heartdelta-aha17/actions/workflows/tests.yml)
 [![License](https://img.shields.io/badge/use-noncommercial_only-4B5563)](LICENSE)
 
-Reproducible longitudinal cardiac CT and radiotherapy-dose analysis using the
-American Heart Association 17-segment left-ventricular model.
+Cardiac CT segmentation, radiotherapy dose analysis, and longitudinal attenuation
+measurements using the American Heart Association 17-segment left-ventricular
+model.
 
-The workflow accompanies the manuscript *Left Ventricular Dose Distribution
-After Proton Versus Photon Regional Nodal Irradiation for Breast Cancer: AHA
-17-Segment Dosimetry*. The code is cohort-reusable; study data are not included.
-See [MANUSCRIPT_COVERAGE.md](MANUSCRIPT_COVERAGE.md) for an exact method-to-code
-inventory and the remaining manuscript-specific inputs.
+Starting from planning and follow-up CT volumes, the workflow can generate
+cardiac structure masks and AHA-17 label maps, calculate regional dose and EQD2,
+and measure CT attenuation changes. Existing reviewed AHA maps can also be used.
 
-## Manuscript reproduction status
+Each CT is analyzed on its native grid with its own AHA map. Planning dose is
+sampled on the planning CT; follow-up attenuation is compared by corresponding
+AHA segment or level.
 
-The core computations are reproducible: voxel-wise cardiac EQD2, 17-segment
-dosimetry, native 8-mm/2–5-mm wall-band extraction, complete three-level QC,
-Wilcoxon comparisons, and the manuscript mixed-effects models. The locked
-153-row attenuation/model table reproduces the reported coefficients.
+## Quick start
 
-A completely fresh paper reproduction is not yet claimable from the organized
-registry alone. Two provenance items must be resolved first:
+### 1. Install
 
-1. Trachea/aorta normalization is now implemented, but the preserved canonical
-   slab values match the untransformed stored CT voxels exactly. A fresh
-   normalized rerun will therefore be a method correction, not a byte-for-byte
-   reproduction of those archived values.
-2. Accepted recovered/replaced masks are now recorded in the versioned
-   [`provenance/u19_mask_overrides.csv`](provenance/u19_mask_overrides.csv).
-   A fresh normalized rerun must still confirm the locked manuscript counts of
-   29 FU1 and 22 FU2 patients.
-
-The repository does not hide these count mismatches or substitute archived CSVs
-for raw-image processing.
-
-This repository is intended for a new cohort, not only for regenerating one
-figure. Starting from planning and follow-up CT volumes, it can create cardiac
-chamber masks and native-grid AHA-17 maps, extract planning dose and longitudinal
-attenuation, run cohort comparisons, and generate level-based figures.
-
-## Analysis design
-
-Follow-up CT intensities remain on their native grids. Each timepoint receives
-its own reviewed cardiac/AHA segmentation, and corresponding AHA regions are
-compared longitudinally. Planning dose is sampled on the planning CT AHA map.
-This avoids interpolating follow-up HU through a deformable warp.
-
-```text
-planning CT ── cardiac segmentation ── AHA-17 ── planning dose metrics
-follow-up CT ─ cardiac segmentation ── AHA-17 ── native HU metrics
-                                      │
-                                      └─ segment/level changes ─ statistics + figures
-```
-
-## Installation
-
-For extraction from existing reviewed AHA maps:
+Requires Python 3.10 or newer. Install the segmentation extra to generate
+cardiac masks and AHA maps from CT:
 
 ```bash
 git clone https://github.com/pgsalome/heartdelta-aha17.git
 cd heartdelta-aha17
 python -m venv .venv
 source .venv/bin/activate
-pip install -e .
+python -m pip install -e '.[segmentation]'
 ```
 
-To generate cardiac structures and AHA maps automatically, install the PlatiPy
-cardiac dependencies:
+Segmentation uses PlatiPy and may download external model weights on first use.
+For extraction from existing reviewed maps, use `python -m pip install -e .`.
 
-```bash
-pip install -e '.[segmentation]'
+### 2. Prepare the inputs
+
+Supply CT and dose volumes as NIfTI files (`.nii` or `.nii.gz`). The dose volume
+must contain total treatment dose in Gy and share the planning CT's physical
+coordinate system. The workflow can resample an aligned dose grid to the CT
+spacing; it does not register an unaligned dose volume.
+
+Create `cohort.json` with one entry per case:
+
+```json
+{
+  "cases": [
+    {
+      "case_id": "case001",
+      "ct_rt": "data/case001/ct_rt.nii.gz",
+      "ct_fu1": "data/case001/ct_fu1.nii.gz",
+      "dose": "data/case001/dose.nii.gz",
+      "total_dose_gy": 50.0,
+      "fractions": 25,
+      "dose_type": "effective",
+      "modality": "Photon",
+      "side": "left"
+    }
+  ]
+}
 ```
 
-Segmentation models may download external weights on first use. A GPU is useful
-but is not required for downstream extraction.
+Replace the paths, fractionation, and case labels with your own data. Add
+`ct_fu2` and `ct_fu3` for additional follow-ups. Registry paths are relative to
+`cohort.json`, or can be absolute. A fuller example is available in
+[`examples/cohort.example.json`](examples/cohort.example.json).
 
-## Input registry
-
-Copy `examples/cohort.example.json`. Each case may contain:
-
-- `ct_rt`: planning CT NIfTI;
-- `ct_fu1`, `ct_fu2`, `ct_fu3`: available follow-up CTs;
-- `dose`: physical dose on, or relatable to, the planning grid;
-- `total_dose_gy` and `fractions`: used to calculate EQD2;
-- labels such as `modality`, `side`, `breathing`, and `delivery_technique`.
-
-If accepted AHA maps exist, provide `aha17_rt`, `aha17_fu1`, etc. The pipeline
-then skips segmentation. Corrected masks can therefore replace automatic masks
-without changing downstream code. Relative paths resolve from the registry.
-
-For reviewed replacements, set `mask_overrides` in the workflow configuration
-to a CSV with `case_id`, `timepoint`, `aha17_path`, and optional `lv_path`.
-Relative paths resolve from the CSV; environment variables are supported. The
-applied row is retained as in-memory provenance for each case. See
-[`examples/mask_overrides.example.csv`](examples/mask_overrides.example.csv).
-
-Cardiac EQD2 defaults to α/β = 2 Gy and is calculated voxel-by-voxel before
-regional averaging. Set `dose_type` to `physical` for a proton grid that still
-requires `proton_rbe` (1.1 in the manuscript), or to `effective` when the grid
-is already RBE-weighted. `as_provided` applies no RBE transformation.
-
-When the treatment-planning CT and attenuation baseline differ—for example,
-breath-hold dosimetry but free-breathing longitudinal comparison—keep `ct_rt`
-and `aha17_rt` as the dose geometry and additionally provide
-`attenuation_ct_rt`, `attenuation_aha17_rt`, and `attenuation_lv_rt`.
-
-## Complete workflow
-
-Copy and edit `examples/workflow.example.json`, then run:
-
-```bash
-heartdelta-run my_workflow.json
-# equivalent
-heartdelta run my_workflow.json
-```
-
-The workflow is restartable. Products are reused unless `"overwrite": true`.
-Set `"segment": false` for an analysis-only run with reviewed AHA maps.
-
-It writes:
-
-- `segment_metrics.csv`: dose, EQD2, gEUD, native HU, and ΔHU for segments 1–17;
-- `level_metrics.csv`: voxel-weighted basal, mid, and apical/apex summaries;
-- `native_slab_metrics.csv`: validated 8-mm oblique-slab measurements within
-  the configurable 2–5 mm myocardial band;
-- `native_slab_level_metrics.csv`: pooled basal, mid, and apical values joined
-  to planning dose and used by the supplied cohort statistics and figures;
-- `aha_qc.csv`: label occupancy and completeness;
-- `attenuation_cohort_qc.csv` and `attenuation_analysis_cohort.csv`: complete
-  three-level QC and the exact rows admitted to modeling;
-- `group_tests.csv`, `dose_response.csv`, `mixed_model_terms.csv`, and
-  `mixed_model_diagnostics.csv`;
-- `cardiac_structure_dvh_metrics.csv` when heart/LV/LAD masks are supplied;
-- `segmentation_validation.csv`, segment differences, and an agreement summary
-  when physician/reference LV and AHA masks are supplied;
-- `level_group_boxplots.png` and `level_dose_response.png`;
-- `run_summary.json` with completion counts.
-
-Validate configuration inputs separately with:
+Validate the registry and check that the supplied files exist:
 
 ```bash
 heartdelta registry-validate cohort.json
 ```
 
-The original lightweight registered-image interface remains available:
+### 3. Run the workflow
 
-```bash
-heartdelta aha-generate --registry cohort.json --output processed/aha_maps
-heartdelta extract --registry cohort.json --output outputs/registered_analysis
+Create `workflow.json`:
+
+```json
+{
+  "registry": "cohort.json",
+  "processed_dir": "processed",
+  "output_dir": "outputs",
+  "segment": true,
+  "overwrite": false,
+  "alpha_beta": 2.0,
+  "hu_normalization": "none"
+}
 ```
 
-For new longitudinal cohorts, use the native-grid workflow.
-
-## AHA numbering
-
-```text
-Basal:   1 anterior, 2 anteroseptal, 3 inferoseptal,
-         4 inferior, 5 inferolateral, 6 anterolateral
-Mid:     7 anterior, 8 anteroseptal, 9 inferoseptal,
-        10 inferior, 11 inferolateral, 12 anterolateral
-Apical: 13 anterior, 14 septal, 15 inferior, 16 lateral
-Apex:   17
-```
-
-Level summaries are voxel-weighted, so a small apex does not receive the same
-influence as an entire basal sector.
-
-## Quality control
-
-Inspect cardiac boundaries, basal-to-apical direction, septal/lateral
-orientation, occupancy of all 17 labels, CT/dose physical-coordinate agreement,
-dose units, fractionation, motion, contrast, reconstruction, and metal artifact.
-The automated QC table does not replace visual clinical review.
-
-The manuscript excludes a follow-up unless both baseline and follow-up pooled
-wall-band medians are 0–100 HU, at least 80% of their voxels are within 0–100
-HU, and all three levels pass. This is the default workflow behavior. For a
-different prospective protocol it can be disabled explicitly with
-`"require_complete_three_level_qc": false`.
-
-HU calibration is deliberately not guessed. If scanner-reference calibration
-is required, supply timepoint-specific `trachea_*` and `aorta_*` masks and set
-`"hu_normalization": "trachea_aorta"`. The pipeline uses the historical
-two-point affine transform based on full-mask means, mapping tracheal air to
-−1000 HU and aortic blood to +50 HU. Missing masks, too few voxels, or inadequate
-landmark separation fail QC; the measured means, scale, intercept, and voxel
-counts are written to `native_slab_qc.csv`.
-
-To create a normalized CT independently:
+Then run:
 
 ```bash
-heartdelta-normalize \
-  --ct ct.nii.gz --trachea trachea.nii.gz --aorta aorta.nii.gz \
-  --output ct_normalized.nii.gz
+heartdelta run workflow.json
 ```
 
-This writes the normalized volume plus a calibration JSON sidecar.
+The equivalent standalone command is `heartdelta-run workflow.json`.
+Configuration paths are relative to `workflow.json`.
 
-This software is for research use and is not a treatment-planning or diagnostic
-device. Patient data and local paths must not be committed.
+The workflow generates missing AHA maps and extracts segment and level metrics.
+Cardiac masks and `aha17.nii.gz` are saved under
+`processed/<case_id>/<timepoint>/` (`rt`, `fu1`, `fu2`, or `fu3`).
 
-## Testing
+Supplied AHA maps are used directly. Cached generated masks are reused unless
+`"overwrite": true`; this setting applies to scans without a supplied AHA map.
+Result tables and figures are rewritten on each run. Check
+`outputs/processing_status.csv` and `outputs/run_summary.json` after completion.
+
+## Outputs
+
+Results are written to `output_dir`:
+
+| File | Contents |
+| --- | --- |
+| `segment_metrics.csv` | Dose, EQD2, gEUD, native HU, and ΔHU for segments 1–17. |
+| `level_metrics.csv` | Voxel-weighted basal, mid, and apical summaries. |
+| `aha_qc.csv` | Label occupancy and completeness for each AHA map. |
+| `processing_status.csv`, `run_summary.json` | Per-case status, errors, and run counts. |
+| `native_slab_metrics.csv`, `native_slab_qc.csv` | Wall-band attenuation measurements and extraction/calibration QC. |
+| `native_slab_level_metrics.csv` | Pooled wall-band levels joined to planning dose. |
+| `attenuation_cohort_qc.csv`, `attenuation_analysis_cohort.csv` | Three-level QC decisions and rows admitted to analysis. |
+| `group_tests.csv`, `dose_response.csv` | Proton/photon comparisons and level-specific dose-response fits. |
+| `mixed_model_terms.csv`, `mixed_model_diagnostics.csv` | Mixed-effects estimates and fit diagnostics. |
+| `level_group_boxplots.png`, `level_dose_response.png` | Cohort attenuation and dose-response figures. |
+| `cardiac_structure_dvh_metrics.csv` | DVH metrics when `heart_mask`, `lv_mask`, or `lad_mask` is supplied. |
+| `segmentation_validation.csv`, `segmentation_validation_segments.csv`, `segmentation_validation_summary.json` | Agreement results when automatic and reference LV/AHA masks are supplied. |
+
+Wall-band tables require LV masks as described above. QC cohort tables require
+wall-band data and `require_complete_three_level_qc`; model and figure outputs
+depend on evaluable data. Optional measurements may leave empty CSVs, and some
+outputs are written only when their inputs are available.
+
+## Reviewed masks and wall-band extraction
+
+To skip automatic segmentation, add `aha17_rt`, `aha17_fu1`, and any other
+available timepoint maps to each registry entry, then set `"segment": false`.
+Each map must contain integer labels 1–17 in the corresponding CT's physical
+coordinate system.
+
+Myocardial wall-band extraction additionally requires an LV mask at every
+analyzed timepoint. To use masks from the first run, create `masks.csv`:
+
+```csv
+case_id,timepoint,aha17_path,lv_path
+case001,rt,processed/case001/rt/aha17.nii.gz,processed/case001/rt/Ventricle_L.nii.gz
+case001,fu1,processed/case001/fu1/aha17.nii.gz,processed/case001/fu1/Ventricle_L.nii.gz
+```
+
+Add `"mask_overrides": "masks.csv"` to `workflow.json` and rerun. Review the
+masks before using them for analysis. Replacement masks use the same CSV format;
+paths resolve from the CSV location. See
+[`examples/mask_overrides.example.csv`](examples/mask_overrides.example.csv).
+
+## Analysis options
+
+The full [`workflow example`](examples/workflow.example.json) includes HU
+normalization, side filtering, and mask overrides. Adjust its paths and options
+for your cohort before using it. Wall-band extraction defaults to an 8-mm slab
+and a 2–5 mm band inside the LV mask; change `slab_mm` and
+`myocardial_band_mm` to use different settings.
+
+### Dose and fractionation
+
+EQD2 is calculated voxel-by-voxel before regional averaging. Supply the actual
+`fractions` and `total_dose_gy` for each case.
+
+For proton cases, set `"modality": "Proton"` and choose `dose_type` to match
+the input grid:
+
+| `dose_type` | Dose handling |
+| --- | --- |
+| `"physical"` | Multiply the proton grid by `proton_rbe` (default `1.1`). |
+| `"effective"` | Use an already RBE-weighted grid without further scaling. |
+| `"as_provided"` | Apply no RBE transformation. This is the default if omitted. |
+
+### HU normalization
+
+To calibrate wall-band attenuation, set `"hu_normalization": "trachea_aorta"`
+and provide `trachea_rt`, `aorta_rt`, and the corresponding masks for each
+follow-up (`trachea_fu1`, `aorta_fu1`, etc.). The two-point affine transform maps
+mean tracheal air to −1000 HU and mean aortic blood to +50 HU. Calibration details
+are recorded in `native_slab_qc.csv`. Segment-wide metrics in
+`segment_metrics.csv` use the stored CT intensities.
+
+If the attenuation baseline differs from the planning CT, provide
+`attenuation_ct_rt`, `attenuation_aha17_rt`, and `attenuation_lv_rt`. These are
+used for baseline wall-band attenuation; `ct_rt` and `aha17_rt` remain the dose
+geometry. Baseline calibration masks must match the attenuation CT.
+
+## AHA-17 regions and quality control
+
+| Region | Segments |
+| --- | --- |
+| Basal | 1–6 |
+| Mid | 7–12 |
+| Apical | 13–16 |
+| Apex | 17 |
+
+The pooled apical level includes segments 13–17. Segment-wide level summaries
+are voxel-weighted.
+
+Review cardiac boundaries, basal-to-apical direction, septal/lateral orientation,
+all 17 labels, and CT/dose alignment. Check dose units, fractionation, motion,
+contrast, reconstruction, and artifacts before interpreting results.
+
+By default, a wall-band follow-up enters cohort analysis only when all three
+levels pass: both baseline and follow-up pooled medians must be 0–100 HU, with
+at least 80% of voxels in that range. Set
+`"require_complete_three_level_qc": false` if your analysis protocol uses a
+different inclusion rule. Inspect `native_slab_qc.csv` for missing inputs and
+failed extraction checks.
+
+## Tests
 
 ```bash
-pip install -e '.[test]'
+python -m pip install -e '.[test]'
 pytest
 ```
 
-Tests cover AHA assignments, EQD2/gEUD, registry behavior, and voxel-weighted
-aggregation. Run an end-to-end acceptance case locally because imaging data and
-model weights are not distributed here.
+## License and citation
 
-## License
+Source-available under the [PolyForm Noncommercial License 1.0.0](LICENSE).
+Commercial use requires a separate written agreement.
 
-This software is source-available under the
-[PolyForm Noncommercial License 1.0.0](LICENSE).
+Cite the repository URL, version, and commit used. Machine-readable citation
+metadata are provided in [`CITATION.cff`](CITATION.cff).
 
-Noncommercial use, modification, and redistribution are permitted subject to
-the license terms. Commercial use requires a separate written agreement.
+For research use. Imaging data and external model weights are not included.
 
-This is not an OSI-approved open-source license.
-
-## Citation
-
-Until the associated manuscript has a final citation, cite the repository URL,
-release/version, and commit used. Machine-readable metadata are provided in
-[`CITATION.cff`](CITATION.cff).
-
-## Maintainer
-
-Patrick Salome
+Maintainer: Patrick Salome
